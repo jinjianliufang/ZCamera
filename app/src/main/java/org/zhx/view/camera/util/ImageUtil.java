@@ -8,8 +8,8 @@
 
 package org.zhx.view.camera.util;
 
-import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.Log;
@@ -27,28 +27,49 @@ public class ImageUtil {
 	private static final String TAG = ImageUtil.class.getSimpleName();
 
 	/**
-	 * 
-	 * @param value
+	 *
+	 * @param
 	 * @return
 	 * @throws Exception
 	 * @author zhx
 	 */
-	public static Bitmap getRectBmp(Context context, Rect rect, Bitmap bm) {
+	public static Bitmap getRectBmp(Rect rect, Bitmap bm, Point p) {
 		// TODO Auto-generated method stub
-
-		Point p = DisplayUtil.getScreenMetrics(context);
-
 		int width = rect.right - rect.left;
 		int hight = rect.bottom - rect.top;
-		Log.i(TAG,hight + "@"+ width);
-		Bitmap rectbitmap = Bitmap.createBitmap(bm, rect.left, rect.top, width,
+		Bitmap bitmap = resizeImage(bm, p.x, p.y);
+		Log.i(TAG, hight + "@" + width + "@" + bitmap.getHeight() + "@" + bitmap.getWidth());
+
+		Bitmap rectbitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, width,
 				hight);
 		return rectbitmap;
 	}
 
+	//使用Bitmap加Matrix来缩放
+	public static Bitmap resizeImage(Bitmap bitmap, int w, int h) {
+		Bitmap BitmapOrg = bitmap;
+		int width = BitmapOrg.getWidth();
+		int height = BitmapOrg.getHeight();
+		int newWidth = w;
+		int newHeight = h;
+
+		float scaleWidth = ((float) newWidth) / width;
+		float scaleHeight = ((float) newHeight) / height;
+
+		Matrix matrix = new Matrix();
+		matrix.postScale(scaleWidth, scaleHeight);
+		// if you want to rotate the Bitmap
+		// matrix.postRotate(45);
+		Bitmap resizedBitmap = Bitmap.createBitmap(BitmapOrg, 0, 0, width,
+				height, matrix, true);
+		BitmapOrg.recycle();
+		return resizedBitmap;
+	}
+
+
 	/**
-	 * 
-	 * @param value
+	 *
+	 * @param
 	 * @return
 	 * @throws Exception
 	 * @author zhx

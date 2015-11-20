@@ -1,11 +1,7 @@
 package org.zhx.view.camera.ui;
 
-import java.io.IOException;
-import org.zhx.view.R;
-import org.zhx.view.camera.util.DisplayUtil;
-import org.zhx.view.camera.util.ImageUtil;
-import org.zhx.view.camera.widget.OverlayerView;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -18,15 +14,24 @@ import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PictureCallback;
+import android.os.Build;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ImageView;
+
+import org.zhx.view.R;
+import org.zhx.view.camera.util.DisplayUtil;
+import org.zhx.view.camera.util.ImageUtil;
+import org.zhx.view.camera.widget.OverlayerView;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * 
@@ -58,6 +63,26 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 	private OverlayerView mLayer;
 	private Rect rect;
 	private boolean isTake = false;
+    AutoFocusCallback autoFocusCallback = new AutoFocusCallback() {
+
+        @Override
+        public void onAutoFocus(boolean success, Camera camera) {
+            // TODO Auto-generated method stub
+            if (isTake) {
+                // 点击拍照按钮 对焦 后 拍照
+                // 第一个参数 是拍照的声音，未压缩的数据，压缩后的数据
+                mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
+            }
+        }
+    };
+    /**
+     * 切换摄像头
+     */
+    private ImageView swImg;
+    /**
+     * 当前是否是前置摄像头
+     */
+    private boolean isFrontCamera = false;
 
 	protected void onCreate(android.os.Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -65,16 +90,17 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		setContentView(R.layout.zcamera_base_layout);
-
 		displayPx = DisplayUtil.getScreenMetrics(this);
 		mPreView = (SurfaceView) findViewById(R.id.z_base_camera_preview);
 		tpImg = (ImageView) findViewById(R.id.z_take_pictrue_img);
 		saveBtn = (Button) findViewById(R.id.z_base_camera_save);
 		showImg = (ImageView) findViewById(R.id.z_base_camera_showImg);
 		mLayer = (OverlayerView) findViewById(R.id.z_base_camera_over_img);
-		// 设置取景框的 magin 这里最好 将 这些从dp 转化为px; 距 左 、上 、右、下的 距离 单位是dp
-		rect = DisplayUtil.createCenterScreenRect(this, new Rect(50, 100, 50,
-				100));
+        swImg = (ImageView) findViewById(R.id.btn_switch_camera);
+        swImg.setOnClickListener(this);
+        // 设置取景框的 magin 这里最好 将 这些从dp 转化为px; 距 左 、上 、右、下的 距离 单位是dp
+        rect = DisplayUtil.createCenterScreenRect(this, new Rect(50, 100, 50,
+                100));
 		mLayer.setmCenterRect(rect);
 
 		saveBtn.setOnClickListener(this);
@@ -89,10 +115,8 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
 		// TODO Auto-generated method stub
-		if (!isPreview) {
-			mCamera = Camera.open();
-		}
-	}
+        openCamera();
+    }
 
 	@Override
 	protected void onPause() {
@@ -100,9 +124,11 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 		super.onPause();
 		if (mCamera != null) {
 			if (isPreview) {
-				mCamera.stopPreview();
-				isPreview = false;
-			}
+                mCamera.stopPreview();
+                mCamera.release();
+                mCamera = null;
+                isPreview = false;
+            }
 
 		}
 	}
@@ -110,17 +136,9 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 	@Override
 	protected void onRestart() {
 		// TODO Auto-generated method stub
-		super.onRestart();
-
-		if (mCamera != null) {
-			mCamera.stopPreview();
-
-			mCamera.startPreview();
-
-			isPreview = true;
-
-		}
-	}
+        super.onRestart();
+        initCamera();
+    }
 
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
@@ -132,22 +150,52 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		// TODO Auto-generated method stub
-		// 当holder被回收时 释放硬件
-		if (mCamera != null) {
-			if (isPreview) {
-				mCamera.stopPreview();
+        // 当holder被回收时 释放硬件
+        releaseCamera();
+
+    }
+
+    void releaseCamera() {
+        if (mCamera != null) {
+            if (isPreview) {
+                mCamera.stopPreview();
 			}
 			mCamera.release();
-			mCamera = null;
-		}
+            mCamera = null;
+        }
+        isPreview = false;
+    }
 
-	};
+    void switchCamera() throws Exception {
+        isFrontCamera = !isFrontCamera;
+        releaseCamera();
+        openCamera();
+        initCamera();
+    }
+
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
+    void openCamera() {
+        if (!isFrontCamera) {
+            mCamera = Camera.open();
+        } else {
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+            for (int i = 0; i < Camera.getNumberOfCameras(); i++) {
+                Camera.getCameraInfo(i, cameraInfo);
+                {
+                    if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                        mCamera = Camera.open(i);
+                        isFrontCamera = true;
+                    }
+                }
+            }
+        }
+    }
 
 	/**
-	 * 
-	 * @param value
-	 * @return
-	 * @throws Exception
+     *
+     * @param
+     * @return
+     * @throws Exception
 	 * @author zhx
 	 */
 	public void initCamera() {
@@ -155,9 +203,11 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 		if (mCamera != null && !isPreview) {
 			try {
 				Camera.Parameters parameters = mCamera.getParameters();
-				// 设置闪光灯为自动
-				parameters.setFlashMode(Parameters.FLASH_MODE_AUTO);
-				mCamera.setParameters(parameters);
+                // 设置闪光灯为自动 前置摄像头时 不能设置
+                if (!isFrontCamera) {
+                    parameters.setFlashMode(Parameters.FLASH_MODE_AUTO);
+                }
+
 				resetCameraSize(parameters);
 				// 设置图片格式
 				parameters.setPictureFormat(ImageFormat.JPEG);
@@ -173,26 +223,41 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 				e.printStackTrace();
 			}
 			isPreview = true;
-		}
+        }
 
-	}
+    }
 
 	/**
 	 * 旋转相机和设置预览大小
-	 * 
-	 * @param parameters
-	 */
+     *
+     * @param parameters
+     */
 	public void resetCameraSize(Parameters parameters) {
 		if (this.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE) {
-			//
 			mCamera.setDisplayOrientation(90);
 		} else {
 			mCamera.setDisplayOrientation(0);
-		}
-		// 设置预览图片大小 为设备 长宽
-		parameters.setPreviewSize(displayPx.x, displayPx.y);
-		// 设置图片大小 为设备 长宽
-		parameters.setPictureSize(displayPx.x, displayPx.y);
+        }
+        List<Camera.Size> sizeList = parameters.getSupportedPreviewSizes();
+        if (sizeList.size() > 0) {
+            Camera.Size cameraSize = sizeList.get(0);
+            // 设置预览图片大小 为设备长宽
+            parameters.setPreviewSize(cameraSize.width, cameraSize.height);
+        }
+        sizeList = parameters.getSupportedPictureSizes();
+        if (sizeList.size() > 0) {
+            Camera.Size cameraSize = sizeList.get(0);
+            for (Camera.Size size : sizeList) {
+
+                if (size.width * size.height == displayPx.x * displayPx.y) {
+                    cameraSize = size;
+                    break;
+                }
+            }
+            // 设置图片大小 为设备长宽
+            parameters.setPictureSize(cameraSize.width, cameraSize.height);
+        }
+
 	}
 
 	@Override
@@ -205,25 +270,20 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 			mCamera.autoFocus(autoFocusCallback);
 			// 手动对焦
 			// mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
-			break;
+            break;
+            case R.id.btn_switch_camera:
+                try {
+                    switchCamera();
+                } catch (Exception e) {
+                    mCamera = null;
+                    e.printStackTrace();
+                }
+                break;
 
 		default:
 			break;
 		}
 	}
-
-	AutoFocusCallback autoFocusCallback = new AutoFocusCallback() {
-
-		@Override
-		public void onAutoFocus(boolean success, Camera camera) {
-			// TODO Auto-generated method stub
-			if (isTake) {
-				// 点击拍照按钮 对焦 后 拍照
-				// 第一个参数 是拍照的声音，未压缩的数据，压缩后的数据
-				mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
-			}
-		}
-	};
 
 	@Override
 	public void onPictureTaken(byte[] data, Camera camera) {
@@ -238,14 +298,20 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 			matrix.setRotate(90, 0.1f, 0.1f);
 			bm = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
 					bitmap.getHeight(), matrix, false);
-		} else {
-			bm = bitmap;
-		}
-		if (rect != null) {
-			bitmap = ImageUtil.getRectBmp(this, rect, bm);
-		}
-		ImageUtil.recycleBitmap(bm);
-		showImg.setImageBitmap(bitmap);
+            if (isFrontCamera) {
+                //前置摄像头旋转图片270度。
+                matrix.setRotate(270);
+                bm = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+            }
+        } else {
+            bm = bitmap;
+        }
+
+        if (rect != null) {
+            bitmap = ImageUtil.getRectBmp(rect, bm, displayPx);
+        }
+        ImageUtil.recycleBitmap(bm);
+        showImg.setImageBitmap(bitmap);
 		if (mCamera != null) {
 			mCamera.stopPreview();
 			mCamera.startPreview();
