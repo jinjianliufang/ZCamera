@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 18
-    buildToolsVersion "23.0.2"
+    compileSdkVersion 19
+    buildToolsVersion "21.1.2"
 
     defaultConfig {
         applicationId "org.zhx.view"
@@ -15,6 +15,10 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
     }
 }
 

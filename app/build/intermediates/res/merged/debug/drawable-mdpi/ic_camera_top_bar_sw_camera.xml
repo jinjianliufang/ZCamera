@@ -3,4 +3,4 @@
   xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true" android:drawable="@drawable/ic_camera_top_bar_sw_camera_click" />
     <item android:drawable="@drawable/ic_camera_top_bar_sw_camera_normal" />
-</selector><!-- From: file:/E:/csdn/ZCamera1.0/app/src/main/res/drawable-mdpi/ic_camera_top_bar_sw_camera.xml -->
+</selector><!-- From: file:/E:/zhouxue/studio-workplace/ZCamera/app/src/main/res/drawable-mdpi/ic_camera_top_bar_sw_camera.xml -->

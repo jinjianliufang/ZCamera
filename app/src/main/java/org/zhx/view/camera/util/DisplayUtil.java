@@ -24,7 +24,7 @@ public class DisplayUtil {
 
 	/**
 	 * 
-	 * @param value
+	 * @param
 	 * @return int
 	 * @throws Exception
 	 * @author zhx
@@ -36,7 +36,7 @@ public class DisplayUtil {
 
 	/**
 	 * 
-	 * @param value
+	 * @param
 	 * @return
 	 * @throws Exception
 	 * @author zhx
@@ -53,7 +53,7 @@ public class DisplayUtil {
 
 	/**
 	 * 
-	 * @param value
+	 * @param
 	 * @return
 	 * @throws Exception
 	 * @author zhx
@@ -67,7 +67,7 @@ public class DisplayUtil {
 
 	/**
 	 * 
-	 * @param value
+	 * @param
 	 * @return
 	 * @throws Exception
 	 * @author zhx

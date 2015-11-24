@@ -63,32 +63,24 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 	private OverlayerView mLayer;
 	private Rect rect;
 	private boolean isTake = false;
-    AutoFocusCallback autoFocusCallback = new AutoFocusCallback() {
-
-        @Override
-        public void onAutoFocus(boolean success, Camera camera) {
-            // TODO Auto-generated method stub
-            if (isTake) {
-                // 点击拍照按钮 对焦 后 拍照
-                // 第一个参数 是拍照的声音，未压缩的数据，压缩后的数据
-                mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
-            }
-        }
-    };
+	private String[] flashMedols={Parameters.FLASH_MODE_AUTO,Parameters.FLASH_MODE_ON,Parameters.FLASH_MODE_OFF,Parameters.FLASH_MODE_TORCH};
+    private int[]    modelResId={R.drawable.ic_camera_top_bar_flash_auto_normal,R.drawable.ic_camera_top_bar_flash_on_normal,R.drawable.ic_camera_top_bar_flash_off_normal,R.drawable.ic_camera_top_bar_flash_torch_normal};
     /**
      * 切换摄像头
      */
     private ImageView swImg;
+    private ImageView flashModelImg;
     /**
      * 当前是否是前置摄像头
      */
     private boolean isFrontCamera = false;
+    int modelIndex=0;
 
 	protected void onCreate(android.os.Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-				WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		setContentView(R.layout.zcamera_base_layout);
 		displayPx = DisplayUtil.getScreenMetrics(this);
 		mPreView = (SurfaceView) findViewById(R.id.z_base_camera_preview);
@@ -98,6 +90,8 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 		mLayer = (OverlayerView) findViewById(R.id.z_base_camera_over_img);
         swImg = (ImageView) findViewById(R.id.btn_switch_camera);
         swImg.setOnClickListener(this);
+        flashModelImg= (ImageView) findViewById(R.id.btn_flash_mode);
+        flashModelImg.setOnClickListener(this);
         // 设置取景框的 magin 这里最好 将 这些从dp 转化为px; 距 左 、上 、右、下的 距离 单位是dp
         rect = DisplayUtil.createCenterScreenRect(this, new Rect(50, 100, 50,
                 100));
@@ -267,9 +261,9 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 		case R.id.z_take_pictrue_img:
 			// 拍照前 线对焦 对焦后 拍摄（适用于自动对焦）
 			isTake = true;
-			mCamera.autoFocus(autoFocusCallback);
+//			mCamera.autoFocus(autoFocusCallback);
 			// 手动对焦
-			// mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
+			 mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
             break;
             case R.id.btn_switch_camera:
                 try {
@@ -278,6 +272,19 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
                     mCamera = null;
                     e.printStackTrace();
                 }
+                break;
+            case R.id.btn_flash_mode:
+                modelIndex++;
+                if(modelIndex>=flashMedols.length){
+                    modelIndex=0;
+                }
+                Parameters parameters=mCamera.getParameters();
+                List<String> flashmodels=parameters.getSupportedFlashModes();
+                if(flashmodels.contains(flashMedols[modelIndex])){
+                    parameters.setFlashMode(flashMedols[modelIndex]);
+                   flashModelImg.setImageResource(modelResId[modelIndex]);
+                }
+                mCamera.setParameters(parameters);
                 break;
 
 		default:
@@ -318,5 +325,18 @@ public class ZCameraBaseAcitivy extends Activity implements PictureCallback,
 			isPreview = true;
 		}
 	}
+
+	AutoFocusCallback autoFocusCallback = new AutoFocusCallback() {
+
+		@Override
+		public void onAutoFocus(boolean success, Camera camera) {
+			// TODO Auto-generated method stub
+			if (isTake) {
+				// 点击拍照按钮 对焦 后 拍照
+				// 第一个参数 是拍照的声音，未压缩的数据，压缩后的数据
+				mCamera.takePicture(null, null, ZCameraBaseAcitivy.this);
+			}
+		}
+	};
 
 }
